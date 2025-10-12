@@ -9,6 +9,7 @@ import SemVer                                                  from 'semver/clas
 import semverLt                                                from 'semver/functions/lt';
 import semverParse                                             from 'semver/functions/parse';
 import {setTimeout as setTimeoutPromise}                       from 'timers/promises';
+import {spawn}                                                 from 'child_process';
 
 import * as engine                                             from './Engine';
 import * as debugUtils                                         from './debugUtils';
@@ -16,6 +17,7 @@ import * as folderUtils                                        from './folderUti
 import * as httpUtils                                          from './httpUtils';
 import * as nodeUtils                                          from './nodeUtils';
 import * as npmRegistryUtils                                   from './npmRegistryUtils';
+import {resolvePlatformTag}                                    from './platformResolver';
 import {RegistrySpec, Descriptor, Locator, PackageManagerSpec} from './types';
 import {BinList, BinSpec, InstallSpec, DownloadSpec}           from './types';
 
@@ -231,6 +233,11 @@ export async function installVersion(installTarget: string, locator: Locator, {s
   let integrity: string;
   let binPath: string | null = null;
   if (locatorIsASupportedPackageManager) {
+    // Allow spec.url to contain a {platformTag} placeholder for platform-specific packages
+    if (spec.url.includes('{platformTag}')) {
+      const tag = resolvePlatformTag();
+      spec = Object.assign({}, spec, {url: spec.url.replace(/\{platformTag\}/g, tag)});
+    }
     url = spec.url.replace(`{}`, version);
     if (process.env.COREPACK_NPM_REGISTRY) {
       const registry = getRegistryFromPackageManagerSpec(spec);
@@ -392,6 +399,31 @@ export async function runVersion(locator: Locator, installSpec: InstallSpec & {s
       const ext = path.posix.extname(parsedUrl.pathname);
       if (ext === `.js`) {
         binPath = path.join(installSpec.location, path.posix.basename(parsedUrl.pathname));
+      } else {
+        // For single-file native installs (like bun), the tarball may contain
+        // a single executable whose filename is either the tarball basename
+        // or the expected bin name. Try both locations.
+        const candidateFromTarball = path.join(installSpec.location, path.posix.basename(parsedUrl.pathname));
+        try {
+          await fs.promises.access(candidateFromTarball, fs.constants.X_OK | fs.constants.R_OK);
+          binPath = candidateFromTarball;
+        } catch {
+          const candidateByName = path.join(installSpec.location, binName);
+          try {
+            await fs.promises.access(candidateByName, fs.constants.X_OK | fs.constants.R_OK);
+            binPath = candidateByName;
+          } catch {
+            // also try the common `bin/<name>` layout
+            const candidateInBinFolder = path.join(installSpec.location, 'bin', binName);
+            try {
+              await fs.promises.access(candidateInBinFolder, fs.constants.X_OK | fs.constants.R_OK);
+              binPath = candidateInBinFolder;
+            } catch {
+              // leave binPath null and let the later assertion trigger with useful message
+            }
+            // leave binPath null and let the later assertion trigger with useful message
+          }
+        }
       }
     }
   } else {
@@ -405,6 +437,45 @@ export async function runVersion(locator: Locator, installSpec: InstallSpec & {s
 
   if (!binPath)
     throw new Error(`Assertion failed: Unable to locate path for bin '${binName}'`);
+
+  async function isNativeExecutable(p: string) {
+    try {
+      const fh = await fs.promises.open(p, 'r');
+      const {buffer} = await fh.read(Buffer.alloc(4), 0, 4, 0);
+      await fh.close();
+      // ELF header: 0x7f 'E' 'L' 'F'
+      if (buffer[0] === 0x7f && buffer[1] === 0x45 && buffer[2] === 0x4c && buffer[3] === 0x46) return true;
+      // PE header (Windows .exe): 'M' 'Z'
+      if (buffer[0] === 0x4d && buffer[1] === 0x5a) return true;
+      // Mach-O headers (several variants)
+      const header = buffer.readUInt32BE(0);
+      if (header === 0xfeedface || header === 0xfeedfacf || header === 0xcefaedfe || header === 0xcffaedfe) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  // If the binary is a native executable (bun), spawn it instead of loading into Node
+  if (await isNativeExecutable(binPath)) {
+    const child = spawn(binPath, args, {stdio: `inherit`});
+    await new Promise<void>((resolve, reject) => {
+      child.on(`error`, err => reject(err));
+      child.on(`exit`, (code: number | null, signal: NodeJS.Signals | null) => {
+        if (signal) {
+          try {
+            process.kill(process.pid, signal);
+          } catch {
+            // ignore
+          }
+        } else {
+          process.exitCode = typeof code === `number` ? code : 0;
+        }
+        resolve();
+      });
+    });
+    return;
+  }
 
   // @ts-expect-error - Missing types
   if (!Module.enableCompileCache) {

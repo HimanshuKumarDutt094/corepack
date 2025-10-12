@@ -5,6 +5,7 @@ export enum SupportedPackageManagers {
   Npm = `npm`,
   Pnpm = `pnpm`,
   Yarn = `yarn`,
+  Bun = `bun`,
 }
 
 export const SupportedPackageManagerSet = new Set<SupportedPackageManagers>(
@@ -25,6 +26,8 @@ export function isSupportedPackageManager(value: string): value is SupportedPack
 export interface NpmRegistrySpec {
   type: `npm`;
   package: string;
+  /** Optional template that may include `{platformTag}`; used for platform-specific packages (e.g. @oven/bun-{platformTag}) */
+  packageTemplate?: string;
   bin?: string;
 }
 

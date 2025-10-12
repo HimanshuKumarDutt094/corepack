@@ -5,6 +5,7 @@ import defaultConfig              from '../config.json';
 
 import {shouldSkipIntegrityCheck} from './corepackUtils';
 import * as httpUtils             from './httpUtils';
+import {resolvePlatformTag}       from './platformResolver';
 
 // load abbreviated metadata as that's all we need for these calls
 // see: https://github.com/npm/registry/blob/cfe04736f34db9274a780184d1cdb2fb3e4ead2a/docs/responses/package-metadata.md
@@ -14,6 +15,11 @@ export const DEFAULT_HEADERS: Record<string, string> = {
 export const DEFAULT_NPM_REGISTRY_URL = `https://registry.npmjs.org`;
 
 export async function fetchAsJson(packageName: string, version?: string) {
+  // If the packageName contains a platform placeholder, substitute it.
+  if (packageName.includes('{platformTag}')) {
+    const tag = resolvePlatformTag();
+    packageName = packageName.replace(/\{platformTag\}/g, tag);
+  }
   const npmRegistryUrl = process.env.COREPACK_NPM_REGISTRY || DEFAULT_NPM_REGISTRY_URL;
 
   if (process.env.COREPACK_ENABLE_NETWORK === `0`)

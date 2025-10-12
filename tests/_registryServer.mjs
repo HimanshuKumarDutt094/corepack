@@ -63,9 +63,10 @@ function createSimpleTarArchive(fileName, fileContent, mode = 0o644) {
 
 const mockPackageTarGz = gzipSync(Buffer.concat([
   createSimpleTarArchive(`package/bin/customPkgManager.js`, `#!/usr/bin/env node\nconsole.log("customPkgManager: Hello from custom registry");\n`, 0o755),
+  createSimpleTarArchive(`package/bin/bun.js`, `#!/usr/bin/env node\nconsole.log("bun: Hello from custom registry");\n`, 0o755),
   createSimpleTarArchive(`package/bin/pnpm.js`, `#!/usr/bin/env node\nconsole.log("pnpm: Hello from custom registry");\n`, 0o755),
   createSimpleTarArchive(`package/bin/yarn.js`, `#!/usr/bin/env node\nconsole.log("yarn: Hello from custom registry");\n`, 0o755),
-  createSimpleTarArchive(`package/package.json`, JSON.stringify({bin: {yarn: `bin/yarn.js`, pnpm: `bin/pnpm.js`, customPkgManager: `bin/customPkgManager.js`}})),
+  createSimpleTarArchive(`package/package.json`, JSON.stringify({bin: {yarn: `bin/yarn.js`, pnpm: `bin/pnpm.js`, customPkgManager: `bin/customPkgManager.js`, bun: `bin/bun.js`}})),
   Buffer.alloc(1024),
 ]));
 const shasum = createHash(`sha1`).update(mockPackageTarGz).digest(`hex`);
@@ -82,6 +83,9 @@ const registry = {
 
   '@yarnpkg/cli-dist': [`5.9999.9999`],
   customPkgManager: [`1.0.0`],
+  bun: [`1.0.0`,`1.1.0`,`1.2.0`,`1.3.0`],
+  '@oven/bun-linux-x64': [`1.0.0`,`1.1.0`,`1.2.0`,`1.3.0`],
+  '@oven/bun-linux-x64-musl': [`1.0.0`,`1.1.0`,`1.2.0`,`1.3.0`],
 };
 
 function generateSignature(packageName, version) {

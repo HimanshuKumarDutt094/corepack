@@ -152,12 +152,81 @@ const testedPackageManagers: Array<[string, string] | [string, string, string]> 
   [`npm`, `6.14.2`],
   [`npm`, `6.14.2+sha1.f057d35cd4792c4c511bb1fa332edb43143d07b0`],
   [`npm`, `6.14.2+sha224.50512c1eb404900ee78586faa6d756b8d867ff46a328e6fb4cdf3a87`],
+  // bun is exercised by dedicated tests below (requires platform-specific registry handling)
+  [`bun`, `1.2.0`],
+  [`bun`, `1.3.0`],
 ];
+
+describe(`bun specific tests`, () => {
+  beforeEach(() => {
+    // Make the tests use the in-process mock registry and relax integrity checks
+    process.env.AUTH_TYPE = `COREPACK_NPM_TOKEN`;
+    process.env.COREPACK_INTEGRITY_KEYS = ``; // skip integrity checks for mock registry
+    process.env.COREPACK_DEFAULT_TO_LATEST = `1`;
+  });
+
+  it(`should use the right package manager version for bun@1.3.0`, async () => {
+    process.env.COREPACK_ENABLE_UNSAFE_CUSTOM_URLS = `1`;
+    await xfs.mktempPromise(async cwd => {
+      await expect(runCli(cwd, [`bun@1.3.0`, `--version`], true)).resolves.toMatchObject({
+        exitCode: 0,
+        stderr: ``,
+        stdout: `bun: Hello from custom registry\n`,
+      });
+
+      await xfs.writeJsonPromise(ppath.join(cwd, `package.json` as Filename), {
+        packageManager: `bun@1.3.0`,
+      });
+
+      await expect(runCli(cwd, [`bun`, `--version`], true)).resolves.toMatchObject({
+        exitCode: 0,
+        stderr: ``,
+        stdout: `bun: Hello from custom registry\n`,
+      });
+    });
+  });
+
+  it(`should use the right package manager version for bun@1.2.0`, async () => {
+    process.env.COREPACK_ENABLE_UNSAFE_CUSTOM_URLS = `1`;
+    await xfs.mktempPromise(async cwd => {
+      await expect(runCli(cwd, [`bun@1.2.0`, `--version`], true)).resolves.toMatchObject({
+        exitCode: 0,
+        stderr: ``,
+        stdout: `bun: Hello from custom registry\n`,
+      });
+
+      await xfs.writeJsonPromise(ppath.join(cwd, `package.json` as Filename), {
+        packageManager: `bun@1.2.0`,
+      });
+
+      await expect(runCli(cwd, [`bun`, `--version`], true)).resolves.toMatchObject({
+        exitCode: 0,
+        stderr: ``,
+        stdout: `bun: Hello from custom registry\n`,
+      });
+    });
+  });
+
+  it(`should use the pinned version when local projects don't list any spec (bun)`, async () => {
+    await xfs.mktempPromise(async cwd => {
+      await xfs.writeJsonPromise(ppath.join(cwd, `package.json` as Filename), {
+      });
+
+      await expect(runCli(cwd, [`bun`, `--version`], true)).resolves.toMatchObject({
+        stdout: `bun: Hello from custom registry\n`,
+        exitCode: 0,
+      });
+    });
+  });
+});
 
 for (const [name, version, expectedVersion = version.split(`+`, 1)[0]] of testedPackageManagers) {
   it(`should use the right package manager version for a given project (${name}@${version})`, async () => {
     process.env.COREPACK_ENABLE_UNSAFE_CUSTOM_URLS = `1`;
     await xfs.mktempPromise(async cwd => {
+      if(name === `bun`) {
+        process.env.COREPACK_INTEGRITY_KEYS = ``;
+      }
       await expect(runCli(cwd, [`${name}@${version}`, `--version`])).resolves.toMatchObject({
         exitCode: 0,
         stderr: ``,
@@ -635,6 +704,9 @@ it(`should transparently use the preconfigured version when there is no local pr
 for (const name of SupportedPackageManagerSet) {
   it(`should use the pinned version when local projects don't list any spec (${name})`, async () => {
     await xfs.mktempPromise(async cwd => {
+      if(name === `bun`) {
+        process.env.COREPACK_INTEGRITY_KEYS = ``;
+      }
       await xfs.writeJsonPromise(ppath.join(cwd, `package.json` as Filename), {
         // empty package.json file
       });
@@ -1315,6 +1387,30 @@ it(`should download latest pnpm from custom registry`, async () => {
   });
 });
 
+it(`should download latest bun from custom registry`, async () => {
+  await xfs.mktempPromise(async cwd => {
+    process.env.AUTH_TYPE = `COREPACK_NPM_TOKEN`; // See `_registryServer.mjs`
+    process.env.COREPACK_DEFAULT_TO_LATEST = `1`;
+    process.env.COREPACK_INTEGRITY_KEYS = ``;
+
+    await xfs.writeJsonPromise(ppath.join(cwd, `package.json` as Filename), {
+    });
+
+    await expect(runCli(cwd, [`bun`, `--version`], true)).resolves.toMatchObject({
+      exitCode: 0,
+      stdout: `bun: Hello from custom registry\n`,
+      stderr: ``,
+    });
+
+    // Should keep working with cache
+    await expect(runCli(cwd, [`bun`, `--version`])).resolves.toMatchObject({
+      exitCode: 0,
+      stdout: `bun: Hello from custom registry\n`,
+      stderr: ``,
+    });
+  });
+});
+
 describe(`should pick up COREPACK_INTEGRITY_KEYS from env`, () => {
   beforeEach(() => {
     process.env.AUTH_TYPE = `COREPACK_NPM_TOKEN`; // See `_registryServer.mjs`
@@ -1477,6 +1573,16 @@ for (const authType of [`COREPACK_NPM_REGISTRY`, `COREPACK_NPM_TOKEN`, `COREPACK
         await expect(runCli(cwd, [`yarn@1.x`, `--version`], true)).resolves.toMatchObject({
           exitCode: 0,
           stdout: `yarn: Hello from custom registry\n`,
+          stderr: ``,
+        });
+      });
+    });
+
+    it(`should download bun`, async () => {
+      await xfs.mktempPromise(async cwd => {
+        await expect(runCli(cwd, [`bun@1.x`, `--version`], true)).resolves.toMatchObject({
+          exitCode: 0,
+          stdout: `bun: Hello from custom registry\n`,
           stderr: ``,
         });
       });
