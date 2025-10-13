@@ -43,11 +43,11 @@ jobs:
                 default: $LATEST_YARN,
                 transparent: {
                   default: $LATEST_BERRY,
-                },
+                  },
+              },
               bun: {
                 default: $LATEST_BUN,
-                }
-              },
+              }
             },
           }" > config.json
 
