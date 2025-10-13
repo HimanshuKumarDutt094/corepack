@@ -23,15 +23,35 @@ jobs:
 
       - name: "Update the package manager versions"
         run: |
-          LATEST_BERRY_VERSION=$(curl https://repo.yarnpkg.com/tags | jq -r '.latest.stable')
+          set -euo pipefail
 
-          LATEST_NPM=$(curl https://registry.npmjs.org/npm | jq -r '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
-          LATEST_PNPM=$(curl https://registry.npmjs.org/pnpm | jq -r '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
-          LATEST_YARN=$(curl https://registry.npmjs.org/yarn | jq -r '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
-          LATEST_BUN=$(curl  https://registry.npmjs.org/bun/latest | jq -r  '.version')
-          LATEST_BERRY=$(jq -nr '$version + "+sha224." + $checksum' --arg version "$LATEST_BERRY_VERSION" --arg checksum "$(curl https://repo.yarnpkg.com/"$LATEST_BERRY_VERSION"/packages/yarnpkg-cli/bin/yarn.js | openssl dgst -sha224 | cut -d' ' -f2)")
+          LATEST_BERRY_VERSION=$(curl -s https://repo.yarnpkg.com/tags | jq -r '.latest.stable')
 
-          git --no-pager show HEAD:config.json | jq --arg LATEST_NPM "$LATEST_NPM" --arg LATEST_PNPM "$LATEST_PNPM" --arg LATEST_YARN "$LATEST_YARN" --arg LATEST_BERRY "$LATEST_BERRY" --arg LATEST_BUN "$LATEST_BUN" '.definitions.npm.default = $LATEST_NPM | .definitions.pnpm.default = $LATEST_PNPM | .definitions.yarn.default = $LATEST_YARN | .definitions.yarn.transparent.default = $LATEST_BERRY | .definitions.bun.default = $LATEST_BUN' > config.json
+          LATEST_NPM=$(curl -s https://registry.npmjs.org/npm | jq -r '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
+          LATEST_PNPM=$(curl -s https://registry.npmjs.org/pnpm | jq -r '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
+          LATEST_YARN=$(curl -s https://registry.npmjs.org/yarn | jq -r '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
+          LATEST_BUN=$(curl -s  https://registry.npmjs.org/bun/latest | jq -r  '.version')
+          BERRY_CHECKSUM=$(curl -s "https://repo.yarnpkg.com/${LATEST_BERRY_VERSION}/packages/yarnpkg-cli/bin/yarn.js" | openssl dgst -sha224 | awk '{print $2}')
+          LATEST_BERRY="${LATEST_BERRY_VERSION}+sha224.${BERRY_CHECKSUM}"
+
+          git --no-pager show HEAD:config.json \
+            | jq --arg LATEST_NPM "$LATEST_NPM" \
+                 --arg LATEST_PNPM "$LATEST_PNPM" \
+                 --arg LATEST_YARN "$LATEST_YARN" \
+                 --arg LATEST_BERRY "$LATEST_BERRY" \
+                 --arg LATEST_BUN "$LATEST_BUN" \
+                 '.definitions.npm.default = $LATEST_NPM
+                  | .definitions.pnpm.default = $LATEST_PNPM
+                  | .definitions.yarn.default = $LATEST_YARN
+                  | .definitions.yarn.transparent.default = $LATEST_BERRY
+                  | .definitions.bun.default = $LATEST_BUN' \
+            > config.json.tmp
+
+          # validate JSON
+          jq -e . config.json.tmp >/dev/null
+
+          # replace atomically
+          mv config.json.tmp config.json
 
       - uses: gr2m/create-or-update-pull-request-action@77596e3166f328b24613f7082ab30bf2d93079d5 # v1.9.2
         # Creates a PR or update the Action's existing PR, or
