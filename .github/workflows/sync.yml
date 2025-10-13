@@ -35,8 +35,8 @@ jobs:
           | jq --arg LATEST_NPM "$LATEST_NPM" \
           --arg LATEST_PNPM "$LATEST_PNPM" \
           --arg LATEST_YARN "$LATEST_YARN" \
-          --arg LATEST_BUN "$LATEST_BUN" \
           --arg LATEST_BERRY "$LATEST_BERRY" \
+          --arg LATEST_BUN "$LATEST_BUN"
           '
           .definitions.npm.default = $LATEST_NPM
           | .definitions.pnpm.default = $LATEST_PNPM
