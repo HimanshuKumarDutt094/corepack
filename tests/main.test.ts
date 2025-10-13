@@ -224,9 +224,9 @@ for (const [name, version, expectedVersion = version.split(`+`, 1)[0]] of tested
   it(`should use the right package manager version for a given project (${name}@${version})`, async () => {
     process.env.COREPACK_ENABLE_UNSAFE_CUSTOM_URLS = `1`;
     await xfs.mktempPromise(async cwd => {
-      if(name === `bun`) {
+      if (name === `bun`)
         process.env.COREPACK_INTEGRITY_KEYS = ``;
-      }
+
       await expect(runCli(cwd, [`${name}@${version}`, `--version`])).resolves.toMatchObject({
         exitCode: 0,
         stderr: ``,
@@ -704,9 +704,9 @@ it(`should transparently use the preconfigured version when there is no local pr
 for (const name of SupportedPackageManagerSet) {
   it(`should use the pinned version when local projects don't list any spec (${name})`, async () => {
     await xfs.mktempPromise(async cwd => {
-      if(name === `bun`) {
+      if (name === `bun`)
         process.env.COREPACK_INTEGRITY_KEYS = ``;
-      }
+
       await xfs.writeJsonPromise(ppath.join(cwd, `package.json` as Filename), {
         // empty package.json file
       });

@@ -83,9 +83,9 @@ const registry = {
 
   '@yarnpkg/cli-dist': [`5.9999.9999`],
   customPkgManager: [`1.0.0`],
-  bun: [`1.0.0`,`1.1.0`,`1.2.0`,`1.3.0`],
-  '@oven/bun-linux-x64': [`1.0.0`,`1.1.0`,`1.2.0`,`1.3.0`],
-  '@oven/bun-linux-x64-musl': [`1.0.0`,`1.1.0`,`1.2.0`,`1.3.0`],
+  bun: [`1.0.0`, `1.1.0`, `1.2.0`, `1.3.0`],
+  '@oven/bun-linux-x64': [`1.0.0`, `1.1.0`, `1.2.0`, `1.3.0`],
+  '@oven/bun-linux-x64-musl': [`1.0.0`, `1.1.0`, `1.2.0`, `1.3.0`],
 };
 
 function generateSignature(packageName, version) {

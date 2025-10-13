@@ -16,7 +16,7 @@ export const DEFAULT_NPM_REGISTRY_URL = `https://registry.npmjs.org`;
 
 export async function fetchAsJson(packageName: string, version?: string) {
   // If the packageName contains a platform placeholder, substitute it.
-  if (packageName.includes('{platformTag}')) {
+  if (packageName.includes(`{platformTag}`)) {
     const tag = resolvePlatformTag();
     packageName = packageName.replace(/\{platformTag\}/g, tag);
   }

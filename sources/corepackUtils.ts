@@ -1,3 +1,4 @@
+import {spawn}                                                 from 'child_process';
 import {createHash}                                            from 'crypto';
 import {once}                                                  from 'events';
 import fs                                                      from 'fs';
@@ -9,7 +10,6 @@ import SemVer                                                  from 'semver/clas
 import semverLt                                                from 'semver/functions/lt';
 import semverParse                                             from 'semver/functions/parse';
 import {setTimeout as setTimeoutPromise}                       from 'timers/promises';
-import {spawn}                                                 from 'child_process';
 
 import * as engine                                             from './Engine';
 import * as debugUtils                                         from './debugUtils';
@@ -234,7 +234,7 @@ export async function installVersion(installTarget: string, locator: Locator, {s
   let binPath: string | null = null;
   if (locatorIsASupportedPackageManager) {
     // Allow spec.url to contain a {platformTag} placeholder for platform-specific packages
-    if (spec.url.includes('{platformTag}')) {
+    if (spec.url.includes(`{platformTag}`)) {
       const tag = resolvePlatformTag();
       spec = Object.assign({}, spec, {url: spec.url.replace(/\{platformTag\}/g, tag)});
     }
@@ -414,7 +414,7 @@ export async function runVersion(locator: Locator, installSpec: InstallSpec & {s
             binPath = candidateByName;
           } catch {
             // also try the common `bin/<name>` layout
-            const candidateInBinFolder = path.join(installSpec.location, 'bin', binName);
+            const candidateInBinFolder = path.join(installSpec.location, `bin`, binName);
             try {
               await fs.promises.access(candidateInBinFolder, fs.constants.X_OK | fs.constants.R_OK);
               binPath = candidateInBinFolder;
@@ -440,7 +440,7 @@ export async function runVersion(locator: Locator, installSpec: InstallSpec & {s
 
   async function isNativeExecutable(p: string) {
     try {
-      const fh = await fs.promises.open(p, 'r');
+      const fh = await fs.promises.open(p, `r`);
       const {buffer} = await fh.read(Buffer.alloc(4), 0, 4, 0);
       await fh.close();
       // ELF header: 0x7f 'E' 'L' 'F'
