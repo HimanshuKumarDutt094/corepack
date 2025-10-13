@@ -43,6 +43,7 @@ jobs:
                 transparent: {
                   default: $LATEST_BERRY,
                 },
+              },
             },
           }" > config.json
 
