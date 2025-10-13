@@ -31,25 +31,19 @@ jobs:
           LATEST_BUN=$(curl  https://registry.npmjs.org/bun/latest | jq  '.version')
           LATEST_BERRY=$(jq -n '$version + "+sha224." + $checksum' --arg version "$LATEST_BERRY_VERSION" --arg checksum "$(curl https://repo.yarnpkg.com/"$LATEST_BERRY_VERSION"/packages/yarnpkg-cli/bin/yarn.js | openssl dgst -sha224 | cut -d' ' -f2)")
 
-          git --no-pager show HEAD:config.json | jq '. * '"{
-            definitions: {
-              npm: {
-                default: $LATEST_NPM,
-              },
-              pnpm: {
-                default: $LATEST_PNPM,
-              },
-              yarn: {
-                default: $LATEST_YARN,
-                transparent: {
-                  default: $LATEST_BERRY,
-                  },
-              },
-              bun: {
-                default: $LATEST_BUN,
-              }
-            },
-          }" > config.json
+          git --no-pager show HEAD:config.json \
+          | jq --arg LATEST_NPM "$LATEST_NPM" \
+          --arg LATEST_PNPM "$LATEST_PNPM" \
+          --arg LATEST_YARN "$LATEST_YARN" \
+          --arg LATEST_BUN "$LATEST_BUN" \
+          --arg LATEST_BERRY "$LATEST_BERRY" \
+          '
+          .definitions.npm.default = $LATEST_NPM
+          | .definitions.pnpm.default = $LATEST_PNPM
+          | .definitions.yarn.default = $LATEST_YARN
+          | .definitions.yarn.transparent.default = $LATEST_BERRY
+          | .definitions.bun.default = $LATEST_BUN
+          ' > config.json
 
       - uses: gr2m/create-or-update-pull-request-action@77596e3166f328b24613f7082ab30bf2d93079d5 # v1.9.2
         # Creates a PR or update the Action's existing PR, or
