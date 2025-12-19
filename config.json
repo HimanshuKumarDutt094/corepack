@@ -38,7 +38,7 @@
       }
     },
     "pnpm": {
-      "default": "10.25.0+sha1.2cfb3ab644446565c127f58165cc76368c9c920b",
+      "default": "10.26.1+sha1.fcf0a86b173942b6c450c572d53ec048c4a3a91e",
       "fetchLatestFrom": {
         "type": "npm",
         "package": "pnpm"
@@ -165,7 +165,7 @@
       }
     },
     "bun": {
-      "default": "1.3.4",
+      "default": "1.3.5",
       "fetchLatestFrom": {
         "type": "npm",
         "package": "@oven/bun-{platformTag}"
